@@ -1,0 +1,65 @@
+'use client';
+import { useForm } from 'react-hook-form';
+import { useState, useTransition } from 'react';
+import * as z from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import {ResetSchema} from "@/domain/auth/schema/reset.schema";
+import {resetPassword} from "@/domain/auth/usecases/resetPassword";
+import TextInput from "@/presentation/shared/components/Inputs/TextInput/TextInput";
+import InfoMessage from "@/presentation/shared/components/InfoMessage/InfoMessage";
+import Button from "@/presentation/shared/components/Button/Button";
+
+const ResetPasswordForm = () => {
+    const [error, setError] = useState<string | undefined>('');
+    const [success, setSuccess] = useState<string | undefined>('');
+    const [isPending, startTransition] = useTransition();
+
+    const form = useForm<z.infer<typeof ResetSchema>>({
+        resolver: zodResolver(ResetSchema),
+        defaultValues: {
+            email: '',
+        },
+    });
+
+    const {
+        formState: { errors },
+    } = form;
+
+    const onSubmit = (values: z.infer<typeof ResetSchema>) => {
+        setError('');
+        setSuccess('');
+
+        startTransition(() => {
+            new resetPassword().execute(values).then((data:any) => {
+                setError(data?.error);
+                setSuccess(data?.success);
+            });
+        });
+    };
+
+    return (
+        <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-6'>
+            <TextInput
+                id='email'
+                label='Email'
+                placeholder='example@mail.com'
+                type='email'
+                isDisabled={isPending}
+                form={form.register('email')}
+                errorMessage={errors.email?.message}
+            />
+
+            <InfoMessage text={error || ''} type='error' />
+            <InfoMessage text={success || ''} type='success' />
+
+            <Button
+                type='primary'
+                text='Send reset email'
+                isDisabled={isPending}
+                additionalStyles='w-full'
+            />
+        </form>
+    );
+};
+
+export default ResetPasswordForm;
